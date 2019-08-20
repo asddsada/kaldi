@@ -149,3 +149,8 @@ GSYMS
 /tools/cub-1.8.0/
 /tools/cub
 /tools/python/
+
+
+# user define ignore
+# dataset
+/egs/ASR_eng/s5/LibriSpeech/
