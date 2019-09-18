@@ -154,3 +154,10 @@ GSYMS
 # user define ignore
 # dataset
 /egs/ASR_eng/s5/LibriSpeech/
+/egs/ASR_2018/s5/wav/
+/egs/ASR_2018/s5/audios/
+/egs/ASR_2018/s5/dataset2018/
+/egs/ASR_2019/s5/wav/
+/egs/ASR_2019/s5/audios/
+/egs/ASR_2019/s5/dataset2018/
+/egs/ASR_2019/s5/audios_2019/
