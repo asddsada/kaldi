@@ -77,6 +77,10 @@ GSYMS
 /egs/*/*/plp
 /egs/*/*/exp
 /egs/*/*/data
+/egs/*/*/*/mfcc
+/egs/*/*/*/plp
+/egs/*/*/*/exp
+/egs/*/*/*/data
 
 # /tools/
 /tools/pocolm/
