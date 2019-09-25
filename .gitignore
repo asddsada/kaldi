@@ -153,11 +153,6 @@ GSYMS
 
 # user define ignore
 # dataset
-/egs/ASR_2018/s5/wav/
-/egs/ASR_2018/s5/audios/
-/egs/ASR_2018/s5/dataset2018/
-/egs/ASR_2019/s5/wav/
-/egs/ASR_2019/s5/audios/
-/egs/ASR_2019/s5/dataset2018/
-/egs/ASR_2019/s5/audios_2019/
+/egs/ASR_2018/
+/egs/ASR_2019/
 /egs/asr_senior/asr_s5/export/
