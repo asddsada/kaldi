@@ -126,11 +126,18 @@ set -e
 # Final valid prob (xent)       -1.0441   -0.7874
 
 # configs for 'chain'
+#stage=0
+#decode_nj=50
+#train_set=train_960_cleaned
+#gmm=tri6b_cleaned
+#nnet3_affix=_cleaned
+
 stage=0
-decode_nj=50
-train_set=train_960_cleaned
-gmm=tri6b_cleaned
+decode_nj=30
+train_set=train_clean_100_cleaned
+gmm=tri4b_cleaned
 nnet3_affix=_cleaned
+
 
 # The rest are configs specific to this script.  Most of the parameters
 # are just hardcoded at this level, in the commands below.

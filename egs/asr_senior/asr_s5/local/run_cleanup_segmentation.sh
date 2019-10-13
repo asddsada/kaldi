@@ -1,4 +1,4 @@
-#!/bin/bash
+
 
 # Copyright 2016  Vimal Manohar
 #           2016  Yiming Wang
@@ -22,13 +22,22 @@ set -o pipefail
 set -u
 
 stage=0
+#cleanup_stage=0
+#data=data/train_960
+#cleanup_affix=cleaned
+#srcdir=exp/tri6b
+#nj=100
+#decode_nj=16
+#decode_num_threads=4
+
 cleanup_stage=0
-data=data/train_960
+data=data/train_clean_100
 cleanup_affix=cleaned
-srcdir=exp/tri6b
-nj=100
+srcdir=exp/tri4b
+nj=32
 decode_nj=16
 decode_num_threads=4
+
 
 . ./path.sh
 . ./cmd.sh
