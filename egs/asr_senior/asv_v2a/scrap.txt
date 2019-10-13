@@ -1,0 +1,22 @@
+next:
+make_sre16_unlabeled.pl
+
+sre16_eval_enroll ${test}_clean
+sre16_eval_test ${test}_other
+
+dev-clean test-clean dev-other test-other train-clean-100
+swbd_sre		train-clean-100 train
+swbd_sre_aug		train_aug
+swbd_sre_reverb		train_reverb
+swbd_sre_noise		train_noise
+swbd_sre_music		train_music
+swbd_sre_babble		train_babble
+swbd_sre_aug_128k	train_aug_128k
+swbd_sre_combined	train_combined
+sre_combined		train
+swbd_sre_combined_no_sil	train_combined_no_sil
+
+sre16_major train
+
+utt1 utt2 target
+
