@@ -77,6 +77,7 @@ GSYMS
 /egs/*/*/plp
 /egs/*/*/exp
 /egs/*/*/data
+/egs/*/*/export
 
 # /tools/
 /tools/pocolm/
@@ -155,4 +156,5 @@ GSYMS
 # dataset
 /egs/ASR_2018/
 /egs/ASR_2019/
-/egs/asr_senior/asr_s5/export/
+/egs/asr_senior/*/*.zip
+/egs/asr_senior/*/*.tar.gz

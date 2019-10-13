@@ -27,7 +27,7 @@ export=`pwd`/../asr_s5/export/LibriSpeech/
 # SRE16 trials
 nnet_dir=exp/xvector_nnet_1a
 
-stage=0
+stage=2
 
 #################
 if [ $stage -le 0 ]; then
@@ -117,11 +117,20 @@ if [ $stage -le 2 ]; then
   frame_shift=0.01
   awk -v frame_shift=$frame_shift '{print $1, $2*frame_shift;}' data/train/utt2num_frames > data/train/reco2dur
 
-  if [ ! -d "RIRS_NOISES" ]; then
+  if [ ! -d "export/corpora/RIRS_NOISES" ]; then
     # Download the package that includes the real RIRs, simulated RIRs, isotropic noises and point-source noises
     wget --no-check-certificate http://www.openslr.org/resources/28/rirs_noises.zip
     unzip rirs_noises.zip
+    mv RIRS_NOISES "export/corpora/"
   fi
+  
+  if [ ! -d "export/corpora/musan" ]; then
+    # Download the package that includes the real RIRs, simulated RIRs, isotropic noises and point-source noises
+    wget --no-check-certificate http://www.openslr.org/resources/17/musan.tar.gz 
+    tar -xvzf musan.tar.gz 
+    mv musan "export/corpora/"
+  fi
+  
 
   # Make a version with reverberated speech
   rvb_opts=()
@@ -145,7 +154,7 @@ if [ $stage -le 2 ]; then
 
   # Prepare the MUSAN corpus, which consists of music, speech, and noise
   # suitable for augmentation.
-  steps/data/make_musan.sh --sampling-rate 16000 /export/corpora/JHU/musan data
+  steps/data/make_musan.sh --sampling-rate 16000 /export/corpora/musan data
 
   # Get the duration of the MUSAN recordings.  This will be used by the
   # script augment_data_dir.py.
