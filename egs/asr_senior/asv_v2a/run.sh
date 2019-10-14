@@ -22,12 +22,13 @@
 set -e
 mfccdir=`pwd`/mfcc
 vaddir=`pwd`/mfcc
-export=`pwd`/../asr_s5/export/LibriSpeech/
+libri_export=`pwd`/../asr_s5/export/LibriSpeech/
+export=`pwd`/export/corpora
 
 # SRE16 trials
 nnet_dir=exp/xvector_nnet_1a
 
-stage=2
+stage=4
 
 #################
 if [ $stage -le 0 ]; then
@@ -82,7 +83,7 @@ if [ $stage -le 0 ]; then
 
   for part in dev-clean test-clean dev-other test-other train-clean-100; do
     # use underscore-separated names in data directories.
-    local/data_prep.sh $export/$part data/$(echo $part | sed s/-/_/g)
+    local/data_prep.sh $libri_export/$part data/$(echo $part | sed s/-/_/g)
   done
   mv data/train_clean_100 data/train
   for test in dev_clean test_clean dev_other test_other; do
@@ -117,25 +118,25 @@ if [ $stage -le 2 ]; then
   frame_shift=0.01
   awk -v frame_shift=$frame_shift '{print $1, $2*frame_shift;}' data/train/utt2num_frames > data/train/reco2dur
 
-  if [ ! -d "export/corpora/RIRS_NOISES" ]; then
+  if [ ! -d "${export}/RIRS_NOISES" ]; then
     # Download the package that includes the real RIRs, simulated RIRs, isotropic noises and point-source noises
     wget --no-check-certificate http://www.openslr.org/resources/28/rirs_noises.zip
     unzip rirs_noises.zip
-    mv RIRS_NOISES "export/corpora/"
+    mv RIRS_NOISES ${export}
   fi
   
-  if [ ! -d "export/corpora/musan" ]; then
+  if [ ! -d "${export}/musan" ]; then
     # Download the package that includes the real RIRs, simulated RIRs, isotropic noises and point-source noises
     wget --no-check-certificate http://www.openslr.org/resources/17/musan.tar.gz 
     tar -xvzf musan.tar.gz 
-    mv musan "export/corpora/"
+    mv musan ${export}
   fi
   
 
   # Make a version with reverberated speech
   rvb_opts=()
-  rvb_opts+=(--rir-set-parameters "0.5, RIRS_NOISES/simulated_rirs/smallroom/rir_list")
-  rvb_opts+=(--rir-set-parameters "0.5, RIRS_NOISES/simulated_rirs/mediumroom/rir_list")
+  rvb_opts+=(--rir-set-parameters "0.5, ${export}/RIRS_NOISES/simulated_rirs/smallroom/rir_list")
+  rvb_opts+=(--rir-set-parameters "0.5, ${export}/RIRS_NOISES/simulated_rirs/mediumroom/rir_list")
 
   # Make a reverberated version of the SWBD+SRE list.  Note that we don't add any
   # additive noise here.
@@ -154,7 +155,7 @@ if [ $stage -le 2 ]; then
 
   # Prepare the MUSAN corpus, which consists of music, speech, and noise
   # suitable for augmentation.
-  steps/data/make_musan.sh --sampling-rate 16000 /export/corpora/musan data
+  steps/data/make_musan.sh --sampling-rate 16000 "${export}/musan" data
 
   # Get the duration of the MUSAN recordings.  This will be used by the
   # script augment_data_dir.py.
@@ -175,18 +176,19 @@ if [ $stage -le 2 ]; then
 
   # Take a random subset of the augmentations (128k is somewhat larger than twice
   # the size of the SWBD+SRE list)
-  utils/subset_data_dir.sh data/train_aug 128000 data/train_aug_128k
-  utils/fix_data_dir.sh data/train_aug_128k
+  #114156
+  utils/subset_data_dir.sh data/train_aug 100000 data/train_aug_100k
+  utils/fix_data_dir.sh data/train_aug_100k
 
   # Make MFCCs for the augmented data.  Note that we do not compute a new
   # vad.scp file here.  Instead, we use the vad.scp from the clean version of
   # the list.
-  steps/make_mfcc.sh --mfcc-config conf/mfcc.conf --nj 40 --cmd "$train_cmd" \
-    data/train_aug_128k exp/make_mfcc $mfccdir
+  steps/make_mfcc.sh --mfcc-config conf/mfcc.conf --nj 32 --cmd "$train_cmd" \
+    data/train_aug_100k exp/make_mfcc $mfccdir
 
   # Combine the clean and augmented SWBD+SRE list.  This is now roughly
   # double the size of the original clean list.
-  utils/combine_data.sh data/train_combined data/train_aug_128k data/train
+  utils/combine_data.sh data/train_combined data/train_aug_100k data/train
 
   # Filter out the clean + augmented portion of the SRE list.  This will be used to
   # train the PLDA model later in the script.

@@ -16,7 +16,8 @@
 set -e
 mfccdir=`pwd`/mfcc
 vaddir=`pwd`/mfcc
-export=`pwd`/../asr_s5/export/LibriSpeech/
+libri_export=`pwd`/../asr_s5/export/LibriSpeech/
+export=`pwd`/export/corpora
 
 # SRE16 trials
 sre16_trials=data/sre16_eval_test/trials
@@ -24,18 +25,22 @@ sre16_trials=data/sre16_eval_test/trials
 stage=0
 if [ $stage -le 0 ]; then
   # Path to some, but not all of the training corpora
-  data_root=/export/corpora/LDC
+  data_root=`pwd`/export/corpora/LDC
+  data_root5=`pwd`/export/corpora5/LDC
+  mkdir -p `pwd`/export/corpora5
+  mkdir -p $data_root
+  mkdir -p $data_root5
 
   # Prepare SWBD corpora.
   local/make_swbd_cellular1.pl $data_root/LDC2001S13 \
     data/swbd_cellular1_train
-  local/make_swbd_cellular2.pl /export/corpora5/LDC/LDC2004S07 \
+  local/make_swbd_cellular2.pl $data_root5/LDC2004S07 \
     data/swbd_cellular2_train
   local/make_swbd2_phase1.pl $data_root/LDC98S75 \
     data/swbd2_phase1_train
-  local/make_swbd2_phase2.pl /export/corpora5/LDC/LDC99S79 \
+  local/make_swbd2_phase2.pl $data_root5/LDC99S79 \
     data/swbd2_phase2_train
-  local/make_swbd2_phase3.pl /export/corpora5/LDC/LDC2002S06 \
+  local/make_swbd2_phase3.pl $data_root5/LDC2002S06 \
     data/swbd2_phase3_train
 
   # Combine all SWB corpora into one dataset.
@@ -51,7 +56,7 @@ if [ $stage -le 0 ]; then
   
   for part in dev-clean test-clean dev-other test-other train-clean-100; do
     # use underscore-separated names in data directories.
-    local/data_prep.sh $export/$part data/$(echo $part | sed s/-/_/g)
+    local/data_prep.sh $libri_export/$part data/$(echo $part | sed s/-/_/g)
   done
   mv data/train_clean_100 data/train
   for test in dev_clean test_clean dev_other test_other; do
@@ -101,24 +106,24 @@ if [ $stage -le 4 ]; then
   frame_shift=0.01
   awk -v frame_shift=$frame_shift '{print $1, $2*frame_shift;}' data/train/utt2num_frames > data/train/reco2dur
 
-  if [ ! -d "export/corpora/RIRS_NOISES" ]; then
+  if [ ! -d "${export}/RIRS_NOISES" ]; then
     # Download the package that includes the real RIRs, simulated RIRs, isotropic noises and point-source noises
     wget --no-check-certificate http://www.openslr.org/resources/28/rirs_noises.zip
     unzip rirs_noises.zip
-    mv RIRS_NOISES "export/corpora/"
+    mv RIRS_NOISES ${export}
   fi
   
-  if [ ! -d "export/corpora/musan" ]; then
+  if [ ! -d "${export}/musan" ]; then
     # Download the package that includes the real RIRs, simulated RIRs, isotropic noises and point-source noises
     wget --no-check-certificate http://www.openslr.org/resources/17/musan.tar.gz 
     tar -xvzf musan.tar.gz 
-    mv musan "export/corpora/"
+    mv musan ${export}
   fi
 
   # Make a version with reverberated speech
   rvb_opts=()
-  rvb_opts+=(--rir-set-parameters "0.5, RIRS_NOISES/simulated_rirs/smallroom/rir_list")
-  rvb_opts+=(--rir-set-parameters "0.5, RIRS_NOISES/simulated_rirs/mediumroom/rir_list")
+  rvb_opts+=(--rir-set-parameters "0.5, ${export}/RIRS_NOISES/simulated_rirs/smallroom/rir_list")
+  rvb_opts+=(--rir-set-parameters "0.5, ${export}/RIRS_NOISES/simulated_rirs/mediumroom/rir_list")
 
   # Make a reverberated version of the SWBD+SRE list.  Note that we don't add any
   # additive noise here.
@@ -137,7 +142,7 @@ if [ $stage -le 4 ]; then
 
   # Prepare the MUSAN corpus, which consists of music, speech, and noise
   # suitable for augmentation.
-  steps/data/make_musan.sh --sampling-rate 16000 /export/corpora/musan data
+  steps/data/make_musan.sh --sampling-rate 16000 ${export}/musan data
 
   # Get the duration of the MUSAN recordings.  This will be used by the
   # script augment_data_dir.py.
