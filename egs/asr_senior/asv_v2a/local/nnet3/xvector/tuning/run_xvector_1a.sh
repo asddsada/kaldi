@@ -60,14 +60,16 @@ if [ $stage -le 4 ]; then
   sid/nnet3/xvector/get_egs.sh --cmd "$train_cmd" \
     --nj 8 \
     --stage 0 \
-    --frames-per-iter 1000000000 \
+    --frames-per-iter 450000000 \
     --frames-per-iter-diagnostic 100000 \
     --min-frames-per-chunk 200 \
     --max-frames-per-chunk 400 \
     --num-diagnostic-archives 3 \
-    --num-repeats 35 \
+    --num-repeats 32 \
     "$data" $egs_dir
 fi
+# --frames-per-iter 1000000000
+# --num-repeats 35
 
 if [ $stage -le 5 ]; then
   echo "$0: creating neural net configs using the xconfig parser";
