@@ -60,13 +60,15 @@ if [ $stage -le 0 ]; then
   
   ##make train_major
   
-  for part in dev-clean test-clean dev-other test-other train-clean-100; do
+  for part in dev-clean test-clean dev-other test-other train-clean-100 train-clean-360; do
     # use underscore-separated names in data directories.
     local/data_prep.sh $libri_export/$part data/$(echo $part | sed s/-/_/g)
   done
-  mv data/train_clean_100 data/train
+  utils/combine_data.sh data/train data/train_clean_100 data/train_clean_360 data/dev_clean
+  utils/fix_data_dir.sh data/train
   for test in dev_clean test_clean dev_other test_other; do
-    local/make_trails.pl data/$test
+    local/make_trials.pl data/$test
+    utils/fix_data_dir.sh data/$test
   done
 fi
 
@@ -149,18 +151,21 @@ if [ $stage -le 2 ]; then
 
   # Take a random subset of the augmentations (128k is somewhat larger than twice
   # the size of the SWBD+SRE list)
-  utils/subset_data_dir.sh data/tel_train_aug 100000 data/tel_train_aug_100k
-  utils/fix_data_dir.sh data/tel_train_aug_100k
+  utt_count="$(wc -l data/train/text | cut -d ' ' -f 1)"
+  if [ ! -d data/train_aug_sampling ]; then     
+      utils/subset_data_dir.sh data/train_aug $(($utt_count*2)) data/train_aug_sampling
+  fi  
+  utils/fix_data_dir.sh data/train_aug_sampling
 
   # Make MFCCs for the augmented data.  Note that we do not compute a new
   # vad.scp file here.  Instead, we use the vad.scp from the clean version of
   # the list.
   steps/make_mfcc.sh --mfcc-config conf/mfcc.conf --nj 40 --cmd "$train_cmd" \
-    data/tel_train_aug_100k exp/make_mfcc $mfccdir
+    data/train_aug_sampling exp/make_mfcc $mfccdir
 
   # Combine the clean and augmented SWBD+SRE list.  This is now roughly
   # double the size of the original clean list.
-  utils/combine_data.sh data/tel_train_combined data/tel_train_aug_100k data/tel_train
+  utils/combine_data.sh data/tel_train_combined data/train_aug_sampling data/tel_train
 
   # Filter out the clean + augmented portion of the SRE list.  This will be used to
   # train the PLDA model later in the script.

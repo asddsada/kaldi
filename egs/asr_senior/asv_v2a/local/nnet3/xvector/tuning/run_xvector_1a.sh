@@ -12,8 +12,8 @@ set -e
 
 stage=1
 train_stage=0
-use_gpu=true
-remove_egs=false
+use_gpu=wait
+remove_egs=true
 
 data=data/train
 nnet_dir=exp/xvector_nnet_1a/
@@ -58,15 +58,16 @@ if [ $stage -le 4 ]; then
      /export/b{03,04,05,06}/$USER/kaldi-data/egs/sre16/v2/xvector-$(date +'%m_%d_%H_%M')/$egs_dir/storage $egs_dir/storage
   fi
   sid/nnet3/xvector/get_egs.sh --cmd "$train_cmd" \
-    --nj 8 \
+    --nj 32 \
     --stage 0 \
-    --frames-per-iter 450000000 \
+    --frames-per-iter 1000000000 \
     --frames-per-iter-diagnostic 100000 \
     --min-frames-per-chunk 200 \
     --max-frames-per-chunk 400 \
     --num-diagnostic-archives 3 \
-    --num-repeats 32 \
+    --num-repeats 35 \
     "$data" $egs_dir
+#  exit 1
 fi
 # --frames-per-iter 1000000000
 # --num-repeats 35
@@ -147,7 +148,7 @@ if [ $stage -le 6 ]; then
     --egs.dir="$egs_dir" \
     --cleanup.remove-egs $remove_egs \
     --cleanup.preserve-model-interval=10 \
-    --use-gpu=true \
+    --use-gpu=$use_gpu \
     --dir=$nnet_dir  || exit 1;
 fi
 

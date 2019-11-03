@@ -28,7 +28,7 @@ export=`pwd`/export/corpora
 # SRE16 trials
 nnet_dir=exp/xvector_nnet_1a
 
-stage=4
+stage=11
 
 #################
 if [ $stage -le 0 ]; then
@@ -327,3 +327,46 @@ if [ $stage -le 9 ]; then
       echo "minDCF(p-target=0.001): $mindcf2"
   done  
 fi
+
+if [ $stage -le 10 ]; then
+ echo "START Compute the mean vector for centering the evaluation xvectors"
+ # Compute the mean vector for centering the evaluation xvectors.
+ $train_cmd exp/xvectors_train_re/log/compute_mean.log \
+   ivector-mean scp:exp/xvectors_train/xvector.scp \
+   exp/xvectors_train_re/mean.vec || exit 1;
+ echo "END Compute the mean vector for centering the evaluation xvectors"
+ echo "START Decrease the dimensionality prior to PLDA"
+ # This script uses LDA to decrease the dimensionality prior to PLDA.
+ lda_dim=200
+ $train_cmd exp/xvectors_train_re/log/lda.log \
+   ivector-compute-lda --total-covariance-factor=0.0 --dim=$lda_dim \
+   "ark:ivector-subtract-global-mean scp:exp/xvectors_train/xvector.scp ark:- |" \
+   ark:data/train/utt2spk exp/xvectors_train_re/transform.mat || exit 1;
+ echo "END Decrease the dimensionality prior to PLDA"
+ echo "START Train the PLDA model"
+ # Train the PLDA model.
+ $train_cmd exp/xvectors_train_re/log/plda.log \
+   ivector-compute-plda ark:data/train/spk2utt \
+   "ark:ivector-subtract-global-mean scp:exp/xvectors_train/xvector.scp ark:- | transform-vec exp/xvectors_train_re/transform.mat ark:- ark:- | ivector-normalize-length ark:-  ark:- |" \
+   exp/xvectors_train_re/plda || exit 1;
+ echo "END Train the PLDA model"
+fi
+
+if [ $stage -le 11 ]; then
+
+ echo "Start"  
+ $train_cmd exp/scores/log/test-clean_scoring_re.log \
+   ivector-plda-scoring --normalize-length=true \
+   "ivector-copy-plda --smoothing=0.0 exp/xvectors_train_re/plda - |" \
+   "ark:ivector-subtract-global-mean exp/xvectors_train_re/mean.vec scp:exp/xvectors_test_clean/spk_xvector.scp ark:- | transform-vec exp/xvectors_train_re/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
+   "ark:ivector-subtract-global-mean exp/xvectors_train_re/mean.vec scp:exp/xvectors_test_clean/xvector.scp ark:- | transform-vec exp/xvectors_train_re/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
+   "cat data/test_clean/trials | cut -d\  --fields=1,2 |" exp/scores_test-clean_re || exit 1;
+ echo "End"
+     eer=$(paste data/test_clean/trials exp/scores_test-clean_re | awk '{print $6, $3}' | compute-eer - 2>/dev/null)
+      mindcf1=`sid/compute_min_dcf.py --p-target 0.01 exp/scores_test-clean_re data/test_clean/trials 2> /dev/null`
+      mindcf2=`sid/compute_min_dcf.py --p-target 0.001 exp/scores_test-clean_re data/test_clean/trials 2> /dev/null`
+      echo "EER: exp/scores_${test} $eer%"
+      echo "minDCF(p-target=0.01): $mindcf1"
+      echo "minDCF(p-target=0.001): $mindcf2"
+fi
+
