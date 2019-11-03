@@ -87,8 +87,9 @@ if [ $stage -le 0 ]; then
   done
   utils/combine_data.sh data/train data/train_clean_100 data/train_clean_360 data/dev_clean
   utils/fix_data_dir.sh data/train
+  
   for test in dev_clean test_clean dev_other test_other; do
-    local/make_trials.pl data/$test
+    # local/make_trials_bak.pl data/${test}
     utils/fix_data_dir.sh data/$test
   done
   
@@ -259,18 +260,11 @@ if [ $stage -le 7 ]; then
     exp/xvectors_train
 
   # The test data
-  sid/nnet3/xvector/extract_xvectors.sh --cmd "$train_cmd --mem 6G" --nj 32 \
-    $nnet_dir data/dev_clean \
-    exp/xvectors_dev_clean
-   sid/nnet3/xvector/extract_xvectors.sh --cmd "$train_cmd --mem 6G" --nj 32 \
-    $nnet_dir data/dev_other \
-    exp/xvectors_dev_other
-  sid/nnet3/xvector/extract_xvectors.sh --cmd "$train_cmd --mem 6G" --nj 32 \
-    $nnet_dir data/test_clean \
-    exp/xvectors_test_clean
-  sid/nnet3/xvector/extract_xvectors.sh --cmd "$train_cmd --mem 6G" --nj 32 \
-    $nnet_dir data/test_other \
-    exp/xvectors_test_other
+  for test in dev_clean test_clean dev_other test_other; do
+    sid/nnet3/xvector/extract_xvectors.sh --cmd "$train_cmd --mem 6G" --nj 32 \
+        $nnet_dir data/${test} exp/xvectors_${test}
+    local/make_trials.pl ${test} data/${test}/trials
+  done
 fi
 
 if [ $stage -le 8 ]; then
@@ -310,20 +304,44 @@ if [ $stage -le 8 ]; then
   #  exp/xvectors_sre16_major/plda_adapt || exit 1;
 fi
 
-if [ $stage -le 9 ]; then
-  for test in dev_clean test_clean dev_other test_other; do
-      $train_cmd exp/scores/log/${test}_scoring.log \
-        ivector-plda-scoring --normalize-length=true \
-        "ivector-copy-plda --smoothing=0.0 exp/xvectors_train/plda - |" \
-        "ark:ivector-subtract-global-mean exp/xvectors_train/mean.vec scp:exp/xvectors_${test}/xvector.scp ark:- | transform-vec exp/xvectors_train/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
-        "ark:ivector-subtract-global-mean exp/xvectors_train/mean.vec scp:exp/xvectors_${test}/xvector.scp ark:- | transform-vec exp/xvectors_train/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
-        "cat 'data/${test}/trials' | cut -d\  --fields=1,2 |" exp/scores_${test} || exit 1;
+#if [ $stage -le 9 ]; then
+#  echo "Scoring with out speaker xvector"
+#  for test in dev_clean test_clean dev_other test_other; do
+#      $train_cmd exp/scores/log/${test}_scoring.log \
+#        ivector-plda-scoring --normalize-length=true \
+#        "ivector-copy-plda --smoothing=0.0 exp/xvectors_train/plda - |" \
+#        "ark:ivector-subtract-global-mean exp/xvectors_train/mean.vec scp:exp/xvectors_${test}/xvector.scp ark:- | transform-vec exp/xvectors_train/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
+#        "ark:ivector-subtract-global-mean exp/xvectors_train/mean.vec scp:exp/xvectors_${test}/xvector.scp ark:- | transform-vec exp/xvectors_train/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
+#        "cat 'data/${test}/trials' | cut -d\  --fields=1,2 |" exp/scores_${test} || exit 1;
+#
+#      eer=$(paste data/${test}/trials exp/scores_${test} | awk '{print $6, $3}' | compute-eer - 2>/dev/null)
+#      mindcf1=`sid/compute_min_dcf.py --p-target 0.01 exp/scores_${test} data/${test}/trials 2> /dev/null`
+#      mindcf2=`sid/compute_min_dcf.py --p-target 0.001 exp/scores_${test} data/${test}/trials 2> /dev/null`
+#      echo "EER: exp/scores_${test} $eer%"
+#      echo "minDCF(p-target=0.01): $mindcf1"
+#      echo "minDCF(p-target=0.001): $mindcf2"
+#  done 
+#  echo "End"
+#fi
 
-      eer=$(paste data/${test}/trials exp/scores_${test} | awk '{print $6, $3}' | compute-eer - 2>/dev/null)
-      mindcf1=`sid/compute_min_dcf.py --p-target 0.01 exp/scores_${test} data/${test}/trials 2> /dev/null`
-      mindcf2=`sid/compute_min_dcf.py --p-target 0.001 exp/scores_${test} data/${test}/trials 2> /dev/null`
-      echo "EER: exp/scores_${test} $eer%"
+if [ $stage -le 10 ]; then
+    echo "Scoring with speaker xvector"
+    for test in dev_clean test_clean dev_other test_other; do  
+     $train_cmd exp/scores/log/${test}_scoring_re.log \
+       ivector-plda-scoring --normalize-length=true \
+       "ivector-copy-plda --smoothing=0.0 exp/xvectors_train_re/plda - |" \
+       "ark:ivector-subtract-global-mean exp/xvectors_train_re/mean.vec scp:exp/xvectors_${test}/spk_xvector.scp ark:- | transform-vec exp/xvectors_train_re/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
+       "ark:ivector-subtract-global-mean exp/xvectors_train_re/mean.vec scp:exp/xvectors_${test}/xvector.scp ark:- | transform-vec exp/xvectors_train_re/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
+       "cat data/${test}/trials | cut -d\  --fields=1,2 |" exp/scores_${test}_re || exit 1;     
+     eer=$(paste data/${test}/trials exp/scores_${test}_re | awk '{print $6, $3}' | compute-eer - 2>/dev/null)
+      mindcf1=`sid/compute_min_dcf.py --p-target 0.01 exp/scores_${test}_re data/${test}/trials 2> /dev/null`
+      mindcf2=`sid/compute_min_dcf.py --p-target 0.001 exp/scores_${test}_re data/${test}/trials 2> /dev/null`
+      echo "EER: exp/scores_${test}_re $eer%"
       echo "minDCF(p-target=0.01): $mindcf1"
       echo "minDCF(p-target=0.001): $mindcf2"
-  done  
+    done
+    echo "End"
 fi
+
+echo "$0: success."
+exit 0

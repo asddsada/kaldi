@@ -353,20 +353,23 @@ if [ $stage -le 10 ]; then
 fi
 
 if [ $stage -le 11 ]; then
-
- echo "Start"  
- $train_cmd exp/scores/log/test-clean_scoring_re.log \
-   ivector-plda-scoring --normalize-length=true \
-   "ivector-copy-plda --smoothing=0.0 exp/xvectors_train_re/plda - |" \
-   "ark:ivector-subtract-global-mean exp/xvectors_train_re/mean.vec scp:exp/xvectors_test_clean/spk_xvector.scp ark:- | transform-vec exp/xvectors_train_re/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
-   "ark:ivector-subtract-global-mean exp/xvectors_train_re/mean.vec scp:exp/xvectors_test_clean/xvector.scp ark:- | transform-vec exp/xvectors_train_re/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
-   "cat data/test_clean/trials | cut -d\  --fields=1,2 |" exp/scores_test-clean_re || exit 1;
- echo "End"
-     eer=$(paste data/test_clean/trials exp/scores_test-clean_re | awk '{print $6, $3}' | compute-eer - 2>/dev/null)
-      mindcf1=`sid/compute_min_dcf.py --p-target 0.01 exp/scores_test-clean_re data/test_clean/trials 2> /dev/null`
-      mindcf2=`sid/compute_min_dcf.py --p-target 0.001 exp/scores_test-clean_re data/test_clean/trials 2> /dev/null`
+    echo "Start"
+    for test in dev_clean test_clean dev_other test_other; do  
+     $train_cmd exp/scores/log/${test}_scoring_re.log \
+       ivector-plda-scoring --normalize-length=true \
+       "ivector-copy-plda --smoothing=0.0 exp/xvectors_train_re/plda - |" \
+       "ark:ivector-subtract-global-mean exp/xvectors_train_re/mean.vec scp:exp/xvectors_${test}/spk_xvector.scp ark:- | transform-vec exp/xvectors_train_re/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
+       "ark:ivector-subtract-global-mean exp/xvectors_train_re/mean.vec scp:exp/xvectors_${test}/xvector.scp ark:- | transform-vec exp/xvectors_train_re/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
+       "cat data/${test}/trials.new | cut -d\  --fields=1,2 |" exp/scores_${test}_re || exit 1;     
+     eer=$(paste data/${test}/trials.new exp/scores_${test}_re | awk '{print $6, $3}' | compute-eer - 2>/dev/null)
+      mindcf1=`sid/compute_min_dcf.py --p-target 0.01 exp/scores_${test}_re data/${test}/trials.new 2> /dev/null`
+      mindcf2=`sid/compute_min_dcf.py --p-target 0.001 exp/scores_${test}_re data/${test}/trials.new 2> /dev/null`
       echo "EER: exp/scores_${test} $eer%"
       echo "minDCF(p-target=0.01): $mindcf1"
       echo "minDCF(p-target=0.001): $mindcf2"
+    done
+    echo "End"
 fi
 
+echo "$0: success."
+exit 0

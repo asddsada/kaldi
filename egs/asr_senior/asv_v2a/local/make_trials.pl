@@ -1,20 +1,22 @@
 #!/usr/bin/perl
-#
-# Usage: make_trials.pl data/test/
 
-if (@ARGV != 1) {
-  print STDERR "Usage: $0 <path-to-data-dir>/<test-dir>/\n";
-  print STDERR "e.g. $0 data/test/\n";
+# base on sre16 local/make_sre16_eval.pl
+
+# Usage: make_trials.pl test data/test/trials
+
+if (@ARGV != 2) {
+  print STDERR "Usage: $0 <path-to-data-dir>/<test-dir>/ <path-to-output>\n";
+  print STDERR "e.g. $0 test data/test/trials\n";
   exit(1);
 }
 
-($test_dir) = @ARGV;
+($test_dir, $out_dir) = @ARGV;
 
 #system "cp $test_dir/utt2spk $test_dir/utt2spk_tmp;";
 system "echo $0: Creating trials file in $test_dir";
 
-open(UTT2SPK, "<", "$test_dir/utt2spk") or die "Could not open $test_dir/utt2spk";
-open(TRIALS, ">", "$test_dir/trials") or die "Could not open $test_dir/utt2spk";
+open(UTT2SPK, "<", "data/$test_dir/utt2spk") or die "Could not open data/$test_dir/utt2spk";
+open(TRIALS, ">", "$out_dir") or die "Could not open $out_dir";
 
 while (<UTT2SPK>) {
   chomp;
@@ -36,7 +38,7 @@ close(UTT2SPK) or die;
 close(TRIALS) or die;
 
 #system "rm $test_dir/utt2spk_tmp;";
-system "sort -u $test_dir/trials > $test_dir/trials_tmp;";
-system "rm $test_dir/trials;";
-system "mv $test_dir/trials_tmp $test_dir/trials;";
-system "echo $0: Successfully create trials file in $test_dir;";
+system "sort -u $out_dir > $out_dir_tmp;";
+system "rm $out_dir;";
+system "mv $out_dir_tmp $out_dir;";
+system "echo $0: Successfully create trials file in $out_dir";
